@@ -1,0 +1,46 @@
+{
+  "document_id": "SPEC-SAV-009",
+  "note": "This is synthetic training content, not real product data.",
+  "products": [
+    {
+      "product_name": "Easy Access Saver",
+      "type": "easy_access",
+      "interest_rate_aer": 2.85,
+      "min_deposit_gbp": 1,
+      "withdrawal_limits": "none",
+      "early_access_penalty": "none"
+    },
+    {
+      "product_name": "Cash ISA (Variable)",
+      "type": "cash_isa_variable",
+      "interest_rate_aer": 3.10,
+      "min_deposit_gbp": 1,
+      "withdrawal_limits": "none",
+      "early_access_penalty": "none"
+    },
+    {
+      "product_name": "Cash ISA (1-Year Fixed)",
+      "type": "cash_isa_fixed",
+      "interest_rate_aer": 4.20,
+      "min_deposit_gbp": 500,
+      "term_years": 1,
+      "early_access_penalty": "90 days interest"
+    },
+    {
+      "product_name": "Cash ISA (3-Year Fixed)",
+      "type": "cash_isa_fixed",
+      "interest_rate_aer": 4.45,
+      "min_deposit_gbp": 500,
+      "term_years": 3,
+      "early_access_penalty": "180 days interest"
+    },
+    {
+      "product_name": "Regular Saver",
+      "type": "regular_saver",
+      "interest_rate_aer": 5.50,
+      "min_monthly_deposit_gbp": 25,
+      "max_monthly_deposit_gbp": 250,
+      "condition": "preferential rate applies only while the linked current account remains open and in good standing"
+    }
+  ]
+}

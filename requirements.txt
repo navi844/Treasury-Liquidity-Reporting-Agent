@@ -1,0 +1,12 @@
+# Nirikshan — Python dependencies
+# Install with:  pip install -r requirements.txt
+
+python-dotenv>=1.0.0
+openai>=1.40.0
+chromadb>=0.5.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+requests>=2.31.0
+pymupdf>=1.24.0
+python-docx>=1.1.0
+beautifulsoup4>=4.12.0
