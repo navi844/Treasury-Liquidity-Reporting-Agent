@@ -21,6 +21,7 @@ BASE_URL = "http://localhost:8000"
 QUESTIONS = [
     ("What is the maximum loan-to-value for a first-time buyer under the assisted scheme?", "PDF (mortgage SOP)"),
     ("What is the overdraft interest rate on a Premier account?", "DOCX (account terms)"),
+    ("who is the head of Fraud identification team?", "HTML (FAQ — also a PII redaction test)"),
     ("Who do I contact if I suspect fraud outside business hours?", "HTML (FAQ — also a PII redaction test)"),
     ("Which complaints are still open?", "CSV (complaints register)"),
     ("Which ISA product has the highest interest rate, and what is the early-access penalty on it?", "JSON (product rates)"),

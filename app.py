@@ -1,27 +1,19 @@
 """
-app.py — Nirikshan's FastAPI backend. Keep this running in Terminal 1.
+app.py — Treasury & Liquidity Reporting Agent backend skeleton.
 
-Two endpoints:
+This service keeps the same RAG + tool-calling pattern as the base project,
+but is tailored to treasury and liquidity operations such as:
 
-  GET /ask?q=...
-      Runs the full tool-calling agent loop (lookup_policy +
-      calculate_monthly_repayment) and returns the answer PLUS a
-      complete step-by-step trace: every model call and tool call, each
-      timed, each costed where it has tokens. This is "where the time
-      and cost go" made visible in the response itself, not just printed
-      to a terminal.
-
-  GET /inspect?q=...&max_tokens=...
-      Makes ONE plain model call (no tools) and returns every field of
-      the raw response, plus the latency and cost we had to measure and
-      calculate ourselves, plus a list of things no provider returns at
-      all. Pass a small max_tokens to see finish_reason flip from "stop"
-      to "length" — a deliberately truncated answer.
+- liquidity position queries
+- funding and covenant checks
+- daily cash forecasting
+- treasury policy lookup
+- scenario and concentration analysis
 
 RUN IT:
     uvicorn app:app --reload --port 8000
-Then visit http://localhost:8000/docs to try it from a browser, or use
-agent.py from a second terminal.
+
+Then visit http://localhost:8000/docs to interact with the API.
 """
 
 from __future__ import annotations
@@ -40,17 +32,21 @@ from tracer import Trace
 
 load_dotenv()
 
-app = FastAPI(title="Nirikshan", description="Anatomy of a model call, and where tool loops spend their time.")
+app = FastAPI(
+    title="Treasury & Liquidity Reporting Agent",
+    description="Agentic treasury assistant for liquidity risk queries, policy lookup, and treasury analytics.",
+)
 
-MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 MAX_AGENT_STEPS = 6
 
 SYSTEM_PROMPT = (
-    "You are a customer service assistant for Lloyds Financial (a training scenario, not a real "
-    "bank). Use lookup_policy for any question about rates, limits, eligibility, fraud handling, "
-    "complaints, or savings products — never answer those from memory. Use "
-    "calculate_monthly_repayment for repayment arithmetic. If lookup_policy finds no good match, "
-    "say so plainly. Keep answers short and concrete."
+    "You are a Treasury & Liquidity Reporting Agent for a financial institution. "
+    "Use search_report_library or policy lookup tools for any question about treasury policy, "
+    "liquidity thresholds, funding constraints, covenant rules, or market assumptions. "
+    "Use analytical tools for structured cash and liquidity calculations. Keep answers concise, "
+    "practical, and grounded in the available treasury documents and calculations. "
+    "If a requested fact is not available, say so clearly and suggest the missing data needed."
 )
 
 
@@ -65,8 +61,12 @@ def _run_traced_agent_turn(question: str) -> dict:
         usage = turn.raw.usage
         cost = estimate_cost_usd(MODEL, usage.prompt_tokens, usage.completion_tokens) or 0.0
         trace.record(
-            kind="model_call", name=MODEL, duration_ms=turn.duration_ms,
-            input_tokens=usage.prompt_tokens, output_tokens=usage.completion_tokens, cost_usd=cost,
+            kind="model_call",
+            name=MODEL,
+            duration_ms=turn.duration_ms,
+            input_tokens=usage.prompt_tokens,
+            output_tokens=usage.completion_tokens,
+            cost_usd=cost,
         )
 
         if not turn.tool_calls:
@@ -75,7 +75,8 @@ def _run_traced_agent_turn(question: str) -> dict:
             break
 
         messages.append({
-            "role": "assistant", "content": turn.text,
+            "role": "assistant",
+            "content": turn.text,
             "tool_calls": [{"id": tc.id, "name": tc.name, "arguments": tc.arguments} for tc in turn.tool_calls],
         })
         for tc in turn.tool_calls:
@@ -97,14 +98,14 @@ def _run_traced_agent_turn(question: str) -> dict:
 
 
 @app.get("/ask")
-def ask(q: str = Query(..., description="Customer question")) -> dict:
+def ask(q: str = Query(..., description="Treasury or liquidity question")) -> dict:
     return _run_traced_agent_turn(q)
 
 
 @app.get("/inspect")
 def inspect(
-    q: str = Query(..., description="A plain question, sent with no tools"),
-    max_tokens: int | None = Query(None, description="Set small (e.g. 10-15) to force a truncated answer"),
+    q: str = Query(..., description="Plain question sent without tool use"),
+    max_tokens: int | None = Query(None, description="Optional small max_tokens to force a truncated response"),
 ) -> dict:
     a = inspect_call(q, max_tokens=max_tokens)
     return {
@@ -128,4 +129,17 @@ def inspect(
 
 @app.get("/")
 def root() -> dict:
-    return {"service": "Nirikshan", "endpoints": ["/ask?q=...", "/inspect?q=...&max_tokens=...", "/docs"]}
+    return {
+        "service": "Treasury & Liquidity Reporting Agent",
+        "endpoints": [
+            "/ask?q=...",
+            "/inspect?q=...&max_tokens=...",
+            "/docs",
+        ],
+        "capabilities": [
+            "liquidity position summaries",
+            "liquidity policy lookup",
+            "cash buffer analysis",
+            "treasury reporting assistance",
+        ],
+    }

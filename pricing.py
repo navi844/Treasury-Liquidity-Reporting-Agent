@@ -12,11 +12,14 @@ lab was written. CHECK CURRENT PRICING before relying on this beyond the
 lab: https://openai.com/api/pricing/
 """
 
-PRICES_PER_MILLION_TOKENS_USD = {
+""" PRICES_PER_MILLION_TOKENS_USD = {
     "gpt-4o-mini": {"input": 0.15, "output": 0.60},
     "text-embedding-3-small": {"input": 0.02, "output": 0.0},
+} """
+PRICES_PER_MILLION_TOKENS_USD = {
+    "gpt-4o": {"input": 2.50, "output": 10.00},               # example — replace with current pricing
+    "text-embedding-3-small": {"input": 0.02, "output": 0.0}, # example — replace with current pricing
 }
-
 
 def estimate_cost_usd(model: str, input_tokens: int = 0, output_tokens: int = 0) -> float | None:
     """Return estimated USD cost, or None if `model` isn't in the table (a deliberate signal, not a silent 0.00)."""
@@ -27,5 +30,5 @@ def estimate_cost_usd(model: str, input_tokens: int = 0, output_tokens: int = 0)
 
 
 if __name__ == "__main__":
-    cost = estimate_cost_usd("gpt-4o-mini", input_tokens=1200, output_tokens=340)
-    print(f"Example: 1,200 input + 340 output tokens on gpt-4o-mini \u2248 ${cost:.6f}")
+    cost = estimate_cost_usd("gpt-4o", input_tokens=1200, output_tokens=340)
+    print(f"Example: 1,200 input + 340 output tokens on gpt-4o \u2248 ${cost:.6f}")
