@@ -1,19 +1,13 @@
 """
-app.py — Treasury & Liquidity Reporting Agent backend skeleton.
+app.py — Treasury & Liquidity Reporting Agent backend.
 
-This service keeps the same RAG + tool-calling pattern as the base project,
-but is tailored to treasury and liquidity operations such as:
-
-- liquidity position queries
-- funding and covenant checks
-- daily cash forecasting
-- treasury policy lookup
-- scenario and concentration analysis
+This service supports the end-of-day regulatory liquidity reporting workflow:
+- retrieve treasury policy / liquidity guidance from internal documents
+- run treasury calculations used in LCR-style reporting
+- assemble a concise, auditable answer for analyst review
 
 RUN IT:
     uvicorn app:app --reload --port 8000
-
-Then visit http://localhost:8000/docs to interact with the API.
 """
 
 from __future__ import annotations
@@ -24,9 +18,7 @@ import time
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query
 
-from anatomy import NEVER_RETURNED, inspect_call
 from llm_provider import chat_raw
-from pricing import estimate_cost_usd
 from tools import TOOL_FUNCTIONS, TOOL_SPECS
 from tracer import Trace
 
@@ -34,24 +26,22 @@ load_dotenv()
 
 app = FastAPI(
     title="Treasury & Liquidity Reporting Agent",
-    description="Agentic treasury assistant for liquidity risk queries, policy lookup, and treasury analytics.",
+    description="Agent for regulatory liquidity reporting, policy lookup, and treasury calculations.",
 )
 
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 MAX_AGENT_STEPS = 6
 
 SYSTEM_PROMPT = (
-    "You are a Treasury & Liquidity Reporting Agent for a financial institution. "
-    "Use search_report_library or policy lookup tools for any question about treasury policy, "
-    "liquidity thresholds, funding constraints, covenant rules, or market assumptions. "
-    "Use analytical tools for structured cash and liquidity calculations. Keep answers concise, "
-    "practical, and grounded in the available treasury documents and calculations. "
-    "If a requested fact is not available, say so clearly and suggest the missing data needed."
+    "You are a Treasury & Liquidity Reporting Agent helping analysts prepare end-of-day regulatory liquidity reports. "
+    "Use treasury policy and reporting guidance to answer questions about liquidity metrics, regulatory thresholds, cash positions, "
+    "and exceptions. Use tools when needed for calculations or document retrieval. When facts are missing, say so clearly and "
+    "flag what additional data is required. Keep responses concise, business-relevant, and suitable for analyst review."
 )
 
 
 def _run_traced_agent_turn(question: str) -> dict:
-    """Shared by /ask: runs the loop, returns the answer plus a full trace."""
+    """Shared by /ask: runs the loop, returns the answer plus trace metadata."""
     trace = Trace()
     messages = [{"role": "user", "content": question}]
     answer = None
@@ -59,14 +49,13 @@ def _run_traced_agent_turn(question: str) -> dict:
     for _ in range(MAX_AGENT_STEPS):
         turn = chat_raw(messages, tools=TOOL_SPECS, system=SYSTEM_PROMPT)
         usage = turn.raw.usage
-        cost = estimate_cost_usd(MODEL, usage.prompt_tokens, usage.completion_tokens) or 0.0
         trace.record(
             kind="model_call",
             name=MODEL,
             duration_ms=turn.duration_ms,
             input_tokens=usage.prompt_tokens,
             output_tokens=usage.completion_tokens,
-            cost_usd=cost,
+            cost_usd=0.0,
         )
 
         if not turn.tool_calls:
@@ -91,55 +80,30 @@ def _run_traced_agent_turn(question: str) -> dict:
             messages.append({"role": "tool", "tool_call_id": tc.id, "name": tc.name, "content": result})
 
     if answer is None:
-        answer = "(Stopped after repeated tool calls with no final answer — a runaway-loop pattern.)"
+        answer = "(Stopped after repeated tool calls without a final answer.)"
 
     tools_used = [s.name for s in trace.steps if s.kind == "tool_call"]
     return {"question": question, "answer": answer, "tools_used": tools_used, "trace": trace.as_dict()}
 
 
 @app.get("/ask")
-def ask(q: str = Query(..., description="Treasury or liquidity question")) -> dict:
+def ask(q: str = Query(..., description="Treasury or liquidity reporting question")) -> dict:
     return _run_traced_agent_turn(q)
-
-
-@app.get("/inspect")
-def inspect(
-    q: str = Query(..., description="Plain question sent without tool use"),
-    max_tokens: int | None = Query(None, description="Optional small max_tokens to force a truncated response"),
-) -> dict:
-    a = inspect_call(q, max_tokens=max_tokens)
-    return {
-        "api_returned": {
-            "response_id": a.response_id,
-            "model": a.model,
-            "created": a.created,
-            "finish_reason": a.finish_reason,
-            "content": a.content,
-            "prompt_tokens": a.prompt_tokens,
-            "completion_tokens": a.completion_tokens,
-            "total_tokens": a.total_tokens,
-        },
-        "we_measured_ourselves": {
-            "latency_ms": round(a.latency_ms, 1),
-            "estimated_cost_usd": a.estimated_cost_usd,
-        },
-        "never_returned_by_any_provider": NEVER_RETURNED,
-    }
 
 
 @app.get("/")
 def root() -> dict:
     return {
         "service": "Treasury & Liquidity Reporting Agent",
+        "description": "End-of-day regulatory liquidity reporting assistant for treasury teams.",
         "endpoints": [
             "/ask?q=...",
-            "/inspect?q=...&max_tokens=...",
             "/docs",
         ],
-        "capabilities": [
-            "liquidity position summaries",
-            "liquidity policy lookup",
-            "cash buffer analysis",
-            "treasury reporting assistance",
+        "use_cases": [
+            "Liquidity coverage reporting",
+            "Cash position reconciliation",
+            "Treasury policy lookup",
+            "Exception flagging for analyst review",
         ],
     }
